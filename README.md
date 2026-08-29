@@ -1,24 +1,38 @@
-# JRC
+# JRC - Just a Rep Counter
 
-> A zero-bloat, ad-free tool built to do one thing, do it right, and stay under 50 KB.
+> A zero-bloat, ad-free fitness app to count squats and jump rope reps with zero effort—all under 50 KB.
 
 ---
 
 ## 💡 Why JRC?
 
-Most apps in this space have turned into ad-infested, feature-bloated commercial products. You download a simple utility only to be greeted by tracking SDKs, 50 MB binary sizes, constant pop-ups, and subscription prompts.
+Most fitness counters are bloated with ads, tracking SDKs, mandatory sign-ups, and massive binary sizes just to count your reps. 
 
-**JRC** was created to break that pattern:
+**JRC** gives you effortless rep counting without the noise:
 - **No Ads & No Tracking:** Free and open source (FOSS), forever.
-- **Ultra Lightweight:** Weighs in at **< 50 KB**.
-- **Laser Focused:** Minimal design, zero bloat—it just does the job.
+- **Ultra Lightweight:** Weighs in at **< 50 KB** so it opens instantly and stays out of your way.
+- **Hands-Free Counting:** Uses your device's built-in sensors so you can focus entirely on your workout.
 
 ---
 
 ## ✨ Features
 
-- ⚡ **Instant Execution:** Loads instantly with zero background overhead.
-- 🪶 **Tiny Footprint:** Minimal memory usage and negligible disk footprint.
-- 🔒 **Privacy First:** Performs no analytics, tracking, or network telemetry.
-- 🎯 **No Distractions:** Ad-free, clean, and straightforward UI/UX.
+- 🏋️ **Motion-Based Squat Counter:** Automatically tracks your squat reps using your device's motion sensors—just set your phone in your pocket or mount it.
+- 🪢 **Sound-Based Jump Rope Counter:** Tracks jump rope reps seamlessly by detecting the rhythmic landing and rope sound via your microphone.
+- ⚡ **Instant Execution:** Fires up instantly with zero background overhead or startup delay.
+- 🔒 **Privacy First:** Performs 100% on-device processing. No accounts, no cloud dependencies, no tracking analytics.
+- 🎯 **Zero Distractions:** Clean, ad-free interface designed for quick sets.
 
+---
+
+## Usage
+1. Select your exercise (**Squat** or **Jump Rope**).
+2. For **Squat**: Place your phone securely (e.g., hold with your hand) to enable motion detection.
+3. For **Jump Rope**: Place your phone nearby so it can capture jumping sound.
+4. Begin your set—JRC handles the count automatically.
+
+---
+
+## 📜 License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
