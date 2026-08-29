@@ -21,6 +21,7 @@ public class DataStore {
     private static final String KEY_SESSIONS = "sessions";
     private static final String KEY_GOAL_REPS_PREFIX = "goal_reps_";
     private static final String KEY_GOAL_PACE_PREFIX = "goal_pace_"; // reps/sec
+    private static final String KEY_BEEP_INTERVAL_PREFIX = "beep_interval_";
 
     private final SharedPreferences prefs;
 
@@ -103,5 +104,15 @@ public class DataStore {
 
     public void setGoalPace(ExerciseType type, float repsPerSecond) {
         prefs.edit().putFloat(KEY_GOAL_PACE_PREFIX + type.key, repsPerSecond).apply();
+    }
+
+    // ---------- Settings ----------
+
+    public int getBeepInterval(ExerciseType type) {
+        return prefs.getInt(KEY_BEEP_INTERVAL_PREFIX + type.key, 0); // 0 = beeps off
+    }
+
+    public void setBeepInterval(ExerciseType type, int everyNReps) {
+        prefs.edit().putInt(KEY_BEEP_INTERVAL_PREFIX + type.key, Math.max(0, everyNReps)).apply();
     }
 }

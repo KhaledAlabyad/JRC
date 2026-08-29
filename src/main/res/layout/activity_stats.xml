@@ -1,99 +1,222 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="#121212">
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="STATS &amp; GOALS"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="12dp" />
+
+    <!-- Tabs -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/tabSquatButton"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="STATS &amp; GOALS"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Squats"
             android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="20dp" />
+            android:backgroundTint="#4CAF50" />
 
-        <TextView
-            android:id="@+id/statsSquatSummary"
-            android:layout_width="match_parent"
+        <Button
+            android:id="@+id/tabJumpButton"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="Jump Rope"
             android:textColor="#CCCCCC"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
-
-            <EditText
-                android:id="@+id/statsSquatGoalInput"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:inputType="number"
-                android:hint="Squat goal (reps)"
-                android:textColorHint="#666666"
-                android:textColor="#FFFFFF" />
-
-            <Button
-                android:id="@+id/statsSquatGoalSave"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Save" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/statsJumpSummary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="#CCCCCC"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="24dp">
-
-            <EditText
-                android:id="@+id/statsJumpGoalInput"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:inputType="number"
-                android:hint="Jump rope goal (reps)"
-                android:textColorHint="#666666"
-                android:textColor="#FFFFFF" />
-
-            <Button
-                android:id="@+id/statsJumpGoalSave"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Save" />
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="RECENT SESSIONS"
-            android:textColor="#888888"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <ListView
-            android:id="@+id/statsHistoryList"
-            android:layout_width="match_parent"
-            android:layout_height="400dp" />
+            android:backgroundTint="#2A2A2A" />
 
     </LinearLayout>
-</ScrollView>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- ===================== SQUAT PANEL ===================== -->
+            <LinearLayout
+                android:id="@+id/squatPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout android:id="@+id/squatCardAvgDay" style="@style/StatCard">
+                        <TextView android:text="AVG REPS / DAY" style="@style/StatCardLabel" />
+                        <TextView android:id="@+id/squatAvgPerDay" android:text="0" style="@style/StatCardValue" />
+                    </LinearLayout>
+
+                    <LinearLayout android:id="@+id/squatCardWeekChange" style="@style/StatCard">
+                        <TextView android:text="VS LAST WEEK" style="@style/StatCardLabel" />
+                        <TextView android:id="@+id/squatWeekChange" android:text="—" style="@style/StatCardValue" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout android:id="@+id/squatCardAvg" style="@style/StatCard">
+                        <TextView android:text="AVG / SESSION" style="@style/StatCardLabel" />
+                        <TextView android:id="@+id/squatAvgReps" android:text="0" style="@style/StatCardValue" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView style="@style/SectionHeader" android:text="REPS PER SESSION" />
+                <com.JRC.fitness.BarChartView
+                    android:id="@+id/squatChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:layout_marginBottom="16dp" />
+
+                <TextView style="@style/SectionHeader" android:text="GOAL (REPS)" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="20dp">
+
+                    <EditText
+                        android:id="@+id/statsSquatGoalInput"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:inputType="number"
+                        android:hint="e.g. 50"
+                        android:textColorHint="#666666"
+                        android:textColor="#FFFFFF" />
+
+                    <Button
+                        android:id="@+id/statsSquatGoalSave"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Save" />
+                </LinearLayout>
+
+                <TextView style="@style/SectionHeader" android:text="RECENT SESSIONS" />
+                <LinearLayout
+                    android:id="@+id/squatSessionsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </LinearLayout>
+
+            <!-- ===================== JUMP PANEL ===================== -->
+            <LinearLayout
+                android:id="@+id/jumpPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout android:id="@+id/jumpCardAvgDay" style="@style/StatCard">
+                        <TextView android:text="AVG REPS / DAY" style="@style/StatCardLabel" />
+                        <TextView android:id="@+id/jumpAvgPerDay" android:text="0" style="@style/StatCardValue" />
+                    </LinearLayout>
+
+                    <LinearLayout android:id="@+id/jumpCardWeekChange" style="@style/StatCard">
+                        <TextView android:text="VS LAST WEEK" style="@style/StatCardLabel" />
+                        <TextView android:id="@+id/jumpWeekChange" android:text="—" style="@style/StatCardValue" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout android:id="@+id/jumpCardAvg" style="@style/StatCard">
+                        <TextView android:text="AVG / SESSION" style="@style/StatCardLabel" />
+                        <TextView android:id="@+id/jumpAvgReps" android:text="0" style="@style/StatCardValue" />
+                    </LinearLayout>
+
+                    <LinearLayout android:id="@+id/jumpCardBest" style="@style/StatCard">
+                        <TextView android:text="BEST PACE" style="@style/StatCardLabel" />
+                        <TextView android:id="@+id/jumpBestPace" android:text="0" style="@style/StatCardValue" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView style="@style/SectionHeader" android:text="REPS PER SESSION" />
+                <com.JRC.fitness.BarChartView
+                    android:id="@+id/jumpChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:layout_marginBottom="16dp" />
+
+                <TextView style="@style/SectionHeader" android:text="GOAL (REPS)" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="20dp">
+
+                    <EditText
+                        android:id="@+id/statsJumpGoalInput"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:inputType="number"
+                        android:hint="e.g. 100"
+                        android:textColorHint="#666666"
+                        android:textColor="#FFFFFF" />
+
+                    <Button
+                        android:id="@+id/statsJumpGoalSave"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Save" />
+                </LinearLayout>
+
+                <TextView style="@style/SectionHeader" android:text="RECENT SESSIONS" />
+                <LinearLayout
+                    android:id="@+id/jumpSessionsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </LinearLayout>
+
+        </FrameLayout>
+    </ScrollView>
+
+</LinearLayout>

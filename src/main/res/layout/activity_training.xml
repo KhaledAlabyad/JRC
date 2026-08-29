@@ -13,17 +13,8 @@
         android:layout_height="wrap_content"
         android:textColor="#888888"
         android:textSize="22sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/trainStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#CCCCCC"
-        android:textSize="14sp"
-        android:gravity="center"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp" />
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
 
     <TextView
         android:id="@+id/trainRepCount"
@@ -42,24 +33,6 @@
         android:textColor="#FFFFFF"
         android:textSize="28sp"
         android:layout_marginTop="8dp" />
-
-    <TextView
-        android:id="@+id/trainPace"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="0.00 reps/sec"
-        android:textColor="#888888"
-        android:textSize="18sp"
-        android:layout_marginTop="4dp" />
-
-    <TextView
-        android:id="@+id/trainGoal"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="#4CAF50"
-        android:textSize="16sp"
-        android:layout_marginTop="8dp"
-        android:visibility="gone" />
 
     <Button
         android:id="@+id/trainStopButton"

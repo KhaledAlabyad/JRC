@@ -1,39 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="32dp"
     android:background="#121212">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
+
+        <TextView
+            android:id="@+id/homeTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Just A Rep Counter"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="40dp" />
+
+        <Button
+            android:id="@+id/homeSquatButton"
+            android:layout_width="240dp"
+            android:layout_height="56dp"
+            android:layout_marginBottom="16dp"
+            android:text="Squats" />
+
+        <Button
+            android:id="@+id/homeJumpButton"
+            android:layout_width="240dp"
+            android:layout_height="56dp"
+            android:text="Jump Rope" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Swipe up for Stats &amp; Goals"
+            android:textColor="#666666"
+            android:textSize="13sp"
+            android:layout_marginTop="28dp" />
+
+    </LinearLayout>
+
     <TextView
+        android:id="@+id/homeSettingsButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="JRC FITNESS"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp"
+        android:padding="10dp"
+        android:text="\u2699"
         android:textColor="#FFFFFF"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="48dp" />
+        android:textSize="26sp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackgroundBorderless" />
 
-    <Button
-        android:id="@+id/homeSquatButton"
-        android:layout_width="240dp"
-        android:layout_height="56dp"
-        android:layout_marginBottom="16dp"
-        android:text="Squats" />
-
-    <Button
-        android:id="@+id/homeJumpButton"
-        android:layout_width="240dp"
-        android:layout_height="56dp"
-        android:layout_marginBottom="16dp"
-        android:text="Jump Rope" />
-
-    <Button
-        android:id="@+id/homeStatsButton"
-        android:layout_width="240dp"
-        android:layout_height="56dp"
-        android:text="Stats &amp; Goals" />
-
-</LinearLayout>
+</FrameLayout>

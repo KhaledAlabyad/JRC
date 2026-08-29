@@ -2,9 +2,15 @@ package com.JRC.fitness;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.View;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -12,16 +18,20 @@ import java.util.Locale;
 
 /**
  * Shared behaviour for a single-exercise training window:
- *  - waits ("Get ready") until the first real rep is detected, then starts the clock
- *    (auto-start, no manual "begin" step)
- *  - live rep count, elapsed time, reps/sec
- *  - live progress against a saved goal, if one is set
- *  - saves a Session to history and returns to Main when the user stops
+ *  - starts counting immediately on the first real rep (no manual "begin" step)
+ *  - live rep count (with the goal shown inline, smaller, e.g. "24 / 50")
+ *  - tapping the rep count pauses/resumes counting (color changes to indicate
+ *    the paused state)
+ *  - saves a Session to history and returns to the matching Stats tab when
+ *    the user stops
  *
  * Subclasses (SquatTrainingActivity / JumpTrainingActivity) only wire up the
  * actual sensor and build a RepDetector from the saved CalibrationData.
  */
 public abstract class TrainingActivity extends Activity {
+
+    private static final String COLOR_NORMAL = "#FFFFFF";
+    private static final String COLOR_PAUSED = "#FFF59D"; // light yellow
 
     protected DataStore store;
     protected CalibrationData calibration;
@@ -30,15 +40,15 @@ public abstract class TrainingActivity extends Activity {
     private int repCount = 0;
     private long sessionStartTime = 0; // 0 until first rep arrives
     private boolean stopped = false;
+    private boolean paused = false;
+    private long pauseStartTime = 0;
 
     private TextView titleText;
-    private TextView statusText;
     private TextView repCountText;
     private TextView elapsedText;
-    private TextView paceText;
-    private TextView goalText;
     private Button stopButton;
     private Button recalibrateButton;
+    private ToneGenerator toneGenerator;
 
     private final Handler tickHandler = new Handler();
     private final Runnable ticker = new Runnable() {
@@ -56,15 +66,20 @@ public abstract class TrainingActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (getActionBar() != null) {
+            getActionBar().hide();
+        }
         setContentView(R.layout.activity_training);
         store = new DataStore(this);
+        try {
+            toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
+        } catch (RuntimeException e) {
+            toneGenerator = null; // some devices/emulators refuse to allocate this; beeps just won't play
+        }
 
         titleText = findViewById(R.id.trainTitle);
-        statusText = findViewById(R.id.trainStatus);
         repCountText = findViewById(R.id.trainRepCount);
         elapsedText = findViewById(R.id.trainElapsed);
-        paceText = findViewById(R.id.trainPace);
-        goalText = findViewById(R.id.trainGoal);
         stopButton = findViewById(R.id.trainStopButton);
         recalibrateButton = findViewById(R.id.trainRecalibrateButton);
 
@@ -76,6 +91,7 @@ public abstract class TrainingActivity extends Activity {
             startActivity(i);
             finish();
         });
+        repCountText.setOnClickListener(v -> togglePause());
 
         calibration = store.getCalibration(getType());
         if (calibration == null) {
@@ -88,39 +104,62 @@ public abstract class TrainingActivity extends Activity {
             return;
         }
 
-        showGoal();
-        statusText.setText("Get ready — start your " + getType().label.toLowerCase() + " to begin the session.");
+        refreshStats();
         startSensors();
         tickHandler.postDelayed(ticker, 250);
     }
 
     /** Subclasses call this from their sensor callback for every candidate rep. */
     protected void onRepDetected(long timestampMillis) {
+        if (paused) return; // counting is paused; ignore incoming reps entirely
         if (sessionStartTime == 0) {
             sessionStartTime = timestampMillis;
-            runOnUiThread(() -> statusText.setText("Session started!"));
         }
         repCount++;
+        maybeBeep();
         runOnUiThread(this::refreshStats);
     }
 
-    private void refreshStats() {
-        repCountText.setText(String.valueOf(repCount));
-        long elapsedMs = sessionStartTime == 0 ? 0 : System.currentTimeMillis() - sessionStartTime;
-        elapsedText.setText(formatElapsed(elapsedMs));
-        double pace = elapsedMs > 0 ? repCount / (elapsedMs / 1000.0) : 0;
-        paceText.setText(String.format(Locale.US, "%.2f reps/sec", pace));
-        showGoal();
+    private void maybeBeep() {
+        int every = store.getBeepInterval(getType());
+        if (every > 0 && repCount % every == 0 && toneGenerator != null) {
+            toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 150);
+        }
     }
 
-    private void showGoal() {
+    private void togglePause() {
+        if (stopped) return;
+        paused = !paused;
+        if (paused) {
+            pauseStartTime = System.currentTimeMillis();
+            tickHandler.removeCallbacks(ticker);
+            repCountText.setTextColor(Color.parseColor(COLOR_PAUSED));
+        } else {
+            // Shift the session start forward by however long we were paused so
+            // the elapsed time display doesn't jump when we resume.
+            if (sessionStartTime != 0) {
+                sessionStartTime += (System.currentTimeMillis() - pauseStartTime);
+            }
+            repCountText.setTextColor(Color.parseColor(COLOR_NORMAL));
+            tickHandler.postDelayed(ticker, 250);
+            refreshStats();
+        }
+    }
+
+    private void refreshStats() {
         int goalReps = store.getGoalReps(getType());
         if (goalReps > 0) {
-            goalText.setText("Goal: " + repCount + " / " + goalReps + " reps");
-            goalText.setVisibility(View.VISIBLE);
+            SpannableString combined = new SpannableString(repCount + " / " + goalReps);
+            int slashIndex = String.valueOf(repCount).length();
+            combined.setSpan(new RelativeSizeSpan(0.32f), slashIndex, combined.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            combined.setSpan(new ForegroundColorSpan(Color.parseColor("#888888")), slashIndex, combined.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            repCountText.setText(combined);
         } else {
-            goalText.setVisibility(View.GONE);
+            repCountText.setText(String.valueOf(repCount));
         }
+
+        long elapsedMs = sessionStartTime == 0 ? 0 : System.currentTimeMillis() - sessionStartTime;
+        elapsedText.setText(formatElapsed(elapsedMs));
     }
 
     private static String formatElapsed(long ms) {
@@ -140,7 +179,9 @@ public abstract class TrainingActivity extends Activity {
             long durationMs = System.currentTimeMillis() - sessionStartTime;
             store.addSession(new Session(getType().key, System.currentTimeMillis(), repCount, durationMs));
         }
-        startActivity(new Intent(this, StatsActivity.class));
+        Intent i = new Intent(this, StatsActivity.class);
+        i.putExtra(StatsActivity.EXTRA_TYPE, getType().key);
+        startActivity(i);
         finish();
     }
 
@@ -150,5 +191,9 @@ public abstract class TrainingActivity extends Activity {
         stopped = true;
         tickHandler.removeCallbacks(ticker);
         stopSensors();
+        if (toneGenerator != null) {
+            toneGenerator.release();
+            toneGenerator = null;
+        }
     }
 }

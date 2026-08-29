@@ -9,14 +9,12 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,9 +23,10 @@ public class CalibrationActivity extends Activity implements SensorEventListener
 
     public static final String EXTRA_TYPE = "exercise_type";
     private static final int PERMISSION_REQUEST_AUDIO = 2;
-    private static final int AUDIO_POLL_MS = 60;
+    private static final int AUDIO_WINDOW_MS = 20;
+    private static final int PRE_ROLL_SECONDS = 3; // jump only: give the user time to get into position
 
-    private enum Stage { READY, RECORDING, DONE }
+    private enum Stage { READY, COUNTDOWN, RECORDING, DONE }
 
     private ExerciseType type;
     private DataStore store;
@@ -44,12 +43,15 @@ public class CalibrationActivity extends Activity implements SensorEventListener
     private Sensor accelerometer;
 
     // Jump capture
-    private MediaRecorder mediaRecorder;
-    private final Handler audioHandler = new Handler();
-    private Runnable audioPoller;
+    private AudioAmplitudeSource audioSource;
+    private final Handler countdownHandler = new Handler();
 
     private final List<Float> values = new ArrayList<>();
     private final List<Long> times = new ArrayList<>();
+    // Zero-crossing rate per window, parallel to values/times (JUMP only). Used to
+    // learn the frequency "shape" of a real rep sound so unrelated noises (finger
+    // snaps, taps, claps) don't get counted even if they're loud enough to.
+    private final List<Float> zcrValues = new ArrayList<>();
     private long recordStartTime;
 
     // live rough count during recording, just to show progress toward the target
@@ -61,6 +63,9 @@ public class CalibrationActivity extends Activity implements SensorEventListener
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (getActionBar() != null) {
+            getActionBar().hide();
+        }
         setContentView(R.layout.activity_calibration);
 
         String typeKey = getIntent().getStringExtra(EXTRA_TYPE);
@@ -89,16 +94,22 @@ public class CalibrationActivity extends Activity implements SensorEventListener
 
     private void onActionClicked() {
         if (stage == Stage.READY) {
-            startRecording();
+            if (type == ExerciseType.JUMP) {
+                startPreRollCountdown();
+            } else {
+                startRecording();
+            }
         } else if (stage == Stage.RECORDING) {
             stopRecordingAndAnalyze();
-        } else {
+        } else if (stage == Stage.DONE) {
             // DONE -> recalibrate from scratch
             values.clear();
             times.clear();
+            zcrValues.clear();
             liveCount = 0;
             renderReady();
         }
+        // COUNTDOWN: button is disabled, nothing to do.
     }
 
     private void renderReady() {
@@ -107,17 +118,43 @@ public class CalibrationActivity extends Activity implements SensorEventListener
                 + " at your normal pace after you tap Start. Tap Stop as soon as you finish the last rep.");
         countText.setText("");
         actionButton.setText("Start");
+        actionButton.setEnabled(true);
         continueButton.setVisibility(View.GONE);
+    }
+
+    /** Jump rope only: 3-2-1 countdown so the user has time to get into position before we start listening. */
+    private void startPreRollCountdown() {
+        stage = Stage.COUNTDOWN;
+        actionButton.setEnabled(false);
+        continueButton.setVisibility(View.GONE);
+        countdownHandler.post(new Runnable() {
+            int remaining = PRE_ROLL_SECONDS;
+
+            @Override
+            public void run() {
+                if (stage != Stage.COUNTDOWN) return; // cancelled (e.g. activity finishing)
+                if (remaining <= 0) {
+                    startRecording();
+                    return;
+                }
+                statusText.setText("Get ready...");
+                countText.setText(String.valueOf(remaining));
+                remaining--;
+                countdownHandler.postDelayed(this, 1000);
+            }
+        });
     }
 
     private void startRecording() {
         values.clear();
         times.clear();
+        zcrValues.clear();
         liveCount = 0;
         recordStartTime = System.currentTimeMillis();
         stage = Stage.RECORDING;
         statusText.setText("Recording... perform your " + type.calibrationReps + " reps now.");
         actionButton.setText("Stop");
+        actionButton.setEnabled(true);
         continueButton.setVisibility(View.GONE);
         updateCount();
 
@@ -147,7 +184,7 @@ public class CalibrationActivity extends Activity implements SensorEventListener
         long duration = System.currentTimeMillis() - recordStartTime;
         result = (type == ExerciseType.SQUAT)
                 ? analyzeSquat(values, times, duration, type.calibrationReps)
-                : analyzeJump(values, times, duration, type.calibrationReps);
+                : analyzeJump(values, times, zcrValues, duration, type.calibrationReps);
 
         store.saveCalibration(type, result);
 
@@ -193,37 +230,21 @@ public class CalibrationActivity extends Activity implements SensorEventListener
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, PERMISSION_REQUEST_AUDIO);
             return;
         }
-        try {
-            File tmp = new File(getCacheDir(), "calibration_audio.3gp");
-            mediaRecorder = new MediaRecorder(this);
-            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-            mediaRecorder.setOutputFile(tmp.getAbsolutePath());
-            mediaRecorder.prepare();
-            mediaRecorder.start();
-
-            liveDetector = new RepDetector(3000, 8000, 250, 0.4f, ts -> {
-                liveCount++;
-                runOnUiThread(this::updateCount);
-            });
-
-            audioPoller = new Runnable() {
-                @Override
-                public void run() {
-                    if (mediaRecorder != null && stage == Stage.RECORDING) {
-                        int amplitude = mediaRecorder.getMaxAmplitude();
-                        long now = System.currentTimeMillis();
-                        values.add((float) amplitude);
-                        times.add(now);
-                        if (liveDetector != null) liveDetector.feed(amplitude, now);
-                        audioHandler.postDelayed(this, AUDIO_POLL_MS);
-                    }
-                }
-            };
-            audioHandler.postDelayed(audioPoller, AUDIO_POLL_MS);
-        } catch (Exception e) {
-            e.printStackTrace();
+        // No ZCR gate yet during calibration itself - we don't know the band until
+        // we've captured and analyzed this very recording - so the live count is
+        // amplitude-only and approximate, same as before.
+        liveDetector = new RepDetector(3000, 8000, 250, 0.4f, ts -> {
+            liveCount++;
+            runOnUiThread(this::updateCount);
+        });
+        audioSource = new AudioAmplitudeSource(AUDIO_WINDOW_MS, (amplitude, zcr, ts) -> {
+            if (stage != Stage.RECORDING) return;
+            values.add(amplitude);
+            times.add(ts);
+            zcrValues.add(zcr);
+            if (liveDetector != null) liveDetector.feed(amplitude, ts);
+        });
+        if (!audioSource.start()) {
             statusText.setText("Couldn't access the microphone. Check app permissions and try again.");
             stage = Stage.READY;
             actionButton.setText("Start");
@@ -231,14 +252,9 @@ public class CalibrationActivity extends Activity implements SensorEventListener
     }
 
     private void stopAudioCapture() {
-        if (audioPoller != null) audioHandler.removeCallbacks(audioPoller);
-        if (mediaRecorder != null) {
-            try {
-                mediaRecorder.stop();
-            } catch (Exception ignored) {
-            }
-            mediaRecorder.release();
-            mediaRecorder = null;
+        if (audioSource != null) {
+            audioSource.stop();
+            audioSource = null;
         }
     }
 
@@ -277,13 +293,14 @@ public class CalibrationActivity extends Activity implements SensorEventListener
         if (baseline - low < 0.6f) low = baseline - 0.6f;
         if (high - baseline < 0.6f) high = baseline + 0.6f;
 
-        long minInterval = repIntervalMs(durationMs, reps);
+        long minInterval = repIntervalMs(durationMs, reps, 120);
         return new CalibrationData(low, high, minInterval);
     }
 
-    private static CalibrationData analyzeJump(List<Float> values, List<Long> times, long durationMs, int reps) {
+    private static CalibrationData analyzeJump(List<Float> values, List<Long> times, List<Float> zcrValues,
+                                                 long durationMs, int reps) {
         if (values.isEmpty()) {
-            return new CalibrationData(3000, 9000, 250);
+            return new CalibrationData(3000, 9000, 250, 0f, 0f);
         }
         List<Float> sorted = new ArrayList<>(values);
         Collections.sort(sorted);
@@ -294,15 +311,38 @@ public class CalibrationActivity extends Activity implements SensorEventListener
         float high = floor + 0.5f * span;
         float low = floor + 0.15f * span;
 
-        long minInterval = repIntervalMs(durationMs, reps);
-        return new CalibrationData(low, high, minInterval);
+        // Learn the frequency "shape" of a real rep sound: collect the zero-crossing
+        // rate only from windows loud enough to be a candidate impact (foot landing
+        // or rope hitting the floor - both fall in roughly the same broadband, low-ZCR
+        // range), then take a robust 10th-90th percentile band from those. A quiet
+        // window between reps, or a spectrally different sound like a finger snap,
+        // won't be part of this band.
+        List<Float> impactZcr = new ArrayList<>();
+        for (int i = 0; i < values.size() && i < zcrValues.size(); i++) {
+            if (values.get(i) >= high) {
+                impactZcr.add(zcrValues.get(i));
+            }
+        }
+        float zcrLow = 0f;
+        float zcrHigh = 0f;
+        if (!impactZcr.isEmpty()) {
+            Collections.sort(impactZcr);
+            zcrLow = percentile(impactZcr, 10);
+            zcrHigh = percentile(impactZcr, 90);
+        }
+
+        // The two sounds of a single jump (foot + rope) are usually much closer
+        // together in time than two separate jumps, so use a higher floor here than
+        // for squats to reliably coalesce them into one counted rep.
+        long minInterval = repIntervalMs(durationMs, reps, 150);
+        return new CalibrationData(low, high, minInterval, zcrLow, zcrHigh);
     }
 
-    private static long repIntervalMs(long durationMs, int reps) {
-        if (reps <= 0) return 300;
+    private static long repIntervalMs(long durationMs, int reps, long floorMs) {
+        if (reps <= 0) return Math.max(floorMs, 300);
         long avgPeriod = durationMs / reps;
         long minInterval = (long) (avgPeriod * 0.4);
-        if (minInterval < 120) minInterval = 120;
+        if (minInterval < floorMs) minInterval = floorMs;
         if (minInterval > 1200) minInterval = 1200;
         return minInterval;
     }
@@ -331,6 +371,8 @@ public class CalibrationActivity extends Activity implements SensorEventListener
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stage = Stage.DONE; // stop any in-flight countdown callback from doing anything
+        countdownHandler.removeCallbacksAndMessages(null);
         if (sensorManager != null) sensorManager.unregisterListener(this);
         stopAudioCapture();
     }
