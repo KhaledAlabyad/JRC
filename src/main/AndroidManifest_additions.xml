@@ -1,0 +1,13 @@
+<!--
+    Add these <activity> entries inside your existing <application> tag
+    in AndroidManifest.xml (alongside MainActivity, which you already have).
+    RECORD_AUDIO permission was already required by the old code, so your
+    <uses-permission android:name="android.permission.RECORD_AUDIO" /> line
+    (and android.permission.MODIFY_AUDIO_SETTINGS if you have it) can stay
+    as-is.
+-->
+
+<activity android:name=".CalibrationActivity" android:exported="false" />
+<activity android:name=".SquatTrainingActivity" android:exported="false" />
+<activity android:name=".JumpTrainingActivity" android:exported="false" />
+<activity android:name=".StatsActivity" android:exported="false" />
